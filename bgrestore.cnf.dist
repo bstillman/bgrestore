@@ -1,0 +1,63 @@
+############################################
+
+# bgrestore configuration file
+
+
+# MariaDB host for restore
+restorehost=127.0.0.1
+
+# MariaDB port for restore
+restoreport=40001
+
+# MariaDB user for restore
+restoreuser=bgbackup
+
+# MariaDB password for restore
+restorepass=password
+
+# MariaDB host for backup history
+backuphisthost=127.0.0.1
+
+# MariaDB port for backup history
+backuphistport=40002
+
+# MariaDB user for backup history
+backuphistuser=bgbackup
+
+# MariaDB password for backup history
+backuphistpass=password
+
+# MariaDB schema for backup history
+backuphistschema=mdbutil
+
+# MariaDB host which backup should be from
+backuphost=hostname_from_backup_history
+
+# Datadir
+datadir=/var/lib/mysql
+
+# Datadir owner
+datadirowner=mysql
+
+# Datadir group
+datadirgroup=mysql
+
+# Path to keep logs
+logpath=/var/log
+
+# Log to syslog
+syslog=no
+
+# Used for derypt/decompress
+threads=4
+
+# Comma separated list of email address to be notified.
+maillist=ben@mariadb.com
+
+# Email subject prefix
+mailsubpre="[BGRestore]"
+
+# Email (all or failure)
+mailon=all
+
+############################################
