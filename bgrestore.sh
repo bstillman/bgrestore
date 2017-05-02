@@ -31,6 +31,56 @@ function log_info() {
     fi
 }
 
+# Preflight checks
+function preflight {
+    # find and source the config file
+    etccnf=$( find /etc -name bgrestore.cnf )
+    scriptdir=$( cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    if [ -e "$etccnf" ]; then
+        source "$etccnf"
+    elif [ -e "$scriptdir"/bgrestore.cnf ]; then
+        source "$scriptdir"/bgrestore.cnf
+    else
+        echo "Error: bgrestore.cnf configuration file not found"
+        echo "The configuration file must exist somewhere in /etc or"
+        echo "in the same directory where the script is located"
+        log_status=FAILED
+        exit 1
+    fi
+    # Check for xtrabackup
+    if command -v innobackupex >/dev/null; then
+        innobackupex=$(command -v innobackupex)
+    else
+        log_info "xtrabackup/innobackupex does not appear to be installed. Please install and try again."
+        log_status=FAILED
+        mail_log
+        exit 1
+    fi
+    if [ "$datadir" == '' ] ; then
+        log_info "Datadir location not set correctly."
+        log_status=FAILED
+        mail_log
+        exit 1
+    fi
+    # verify the backup prep directory exists
+    if [ ! -d "$preppath" ]
+    then
+        log_info "Error: $preppath directory not found"
+        log_info "The configured directory for backup prep does not exist."
+        log_status=FAILED
+        mail_log
+        exit 1
+    fi
+    # verify user running script has permissions needed to write to backup prep directory
+    if [ ! -w "$preppath" ]; then
+        log_info "Error: $preppath directory is not writable."
+        log_info "Verify the user running this script has write access to the configured backup prep directory."
+        log_status=FAILED
+        mail_log
+        exit 1
+    fi
+}
+
 # Function to build mysql command
 function mysqlhistcreate {
     mysql=$(command -v mysql)
@@ -87,19 +137,22 @@ function lastfullinfo {
 
 # Function to prepare backup for restore
 function prepit {
+	cp -R "$lastfullbulocation" "$preppath"/
+    buname=$(basename "$lastfullbulocation")
+    bufullpath="$preppath"/"$buname"
 	if [ "$lastfullencrypted" == "yes" ] ; then
 		log_info "Backup is encrypted."
-        $innocommand --decrypt=AES256 --encrypt-key="$(cat "$lastfullcryptkey")" --parallel="$threads" "$lastfullbulocation"
-        for i in `find $lastfullbulocation -iname "*\.xbcrypt"`; do rm -f $i; done
+        $innocommand --decrypt=AES256 --encrypt-key="$(cat "$lastfullcryptkey")" --parallel="$threads" "$bufullpath"
+        for i in `find $bufullpath -iname "*\.xbcrypt"`; do rm -f $i; done
         log_info "Backup now decrypted."
     fi 
     if [ "$lastfullcompressed" == "yes" ] ; then
     	log_info "Backup is compressed."
-        $innocommand --decompress --parallel="$threads" "$lastfullbulocation"
-        for i in `find $lastfullbulocation -iname "*\.qp"`; do rm -f $i; done
+        $innocommand --decompress --parallel="$threads" "$bufullpath"
+        for i in `find $bufullpath -iname "*\.qp"`; do rm -f $i; done
         log_info "Backup is now decompressed."
     fi
-    $innocommand --apply-log "$lastfullbulocation"
+    $innocommand --apply-log "$bufullpath"
     log_info "Backup has been prepared for restore."
 }
 
@@ -112,16 +165,30 @@ function restoreit {
     log_info "Deleting the data directory."
     rm -Rf "${datadir:?}"/*
     log_info "Copying the backup to the data directory."
-    $innocommand --copy-back "$lastfullbulocation"
+    $innocommand --copy-back "$bufullpath"
     log_info "Fixing privileges."
     chown -R "$datadirowner":"$datadirgroup" "$datadir"
     log_info "Starting MariaDB."
     service mysql start
-    log_status=SUCCEEDED
-    log_info "MariaDB successfully restored and restarted."
+    startstatus=$?
+    if [ "$startstatus" -eq 0 ] ; then
+        log_status=SUCCEEDED
+        log_info "MariaDB succussfully restored and restarted."
+    else
+        log_status=FAILED
+        log_info "Something went wrong. MariaDB did not start. Check error log."
+        exit 1
+    fi
 }
 
-
+# Cleanup the decompressed/decrypted backup copy
+function cleanup {
+	if [ "$log_status" == "SUCCEEDED" ] ; then 
+	    log_info "Cleaning up."
+	    rm -Rf "${bufullpath:?}"
+	    log_info "Complete."
+	fi
+}
 
 
 
@@ -129,37 +196,6 @@ function restoreit {
 
 # we trap control-c
 trap sigint INT
-
-# find and source the config file
-etccnf=$( find /etc -name bgrestore.cnf )
-scriptdir=$( cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-if [ -e "$etccnf" ]; then
-    source "$etccnf"
-elif [ -e "$scriptdir"/bgrestore.cnf ]; then
-    source "$scriptdir"/bgrestore.cnf
-else
-    echo "Error: bgrestore.cnf configuration file not found"
-    echo "The configuration file must exist somewhere in /etc or"
-    echo "in the same directory where the script is located"
-    exit 2
-fi
-
-# Check for xtrabackup
-if command -v innobackupex >/dev/null; then
-    innobackupex=$(command -v innobackupex)
-else
-    log_info "xtrabackup/innobackupex does not appear to be installed. Please install and try again."
-    log_status=FAILED
-    mail_log
-    exit 1
-fi
-
-if [ "$datadir" == '' ] ; then
-    log_info "Datadir location not set correctly."
-    log_status=FAILED
-    mail_log
-    exit 2
-fi
 
 # Set some specific variables
 starttime=$(date +"%Y-%m-%d %H:%M:%S")
@@ -169,9 +205,12 @@ mysqlcommand=$(command -v mysql)
 innocommand=$(command -v innobackupex)
 
 # do the work
+preflight
 lastfullinfo
 prepit
 restoreit
+cleanup
 
 # email the log
 mail_log
+
