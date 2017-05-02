@@ -118,7 +118,7 @@ function restoreit {
     log_info "Starting MariaDB."
     service mysql start
     log_status=SUCCEEDED
-    log_info "MariaDB succussfully restored and restarted."
+    log_info "MariaDB successfully restored and restarted."
 }
 
 
