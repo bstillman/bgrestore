@@ -15,6 +15,9 @@ restoreuser=bgbackup
 # MariaDB password for restore
 restorepass=password
 
+# Directory to copy backup to for decompress/decrypt/restore (make sure it has enough space)
+preppath=/backup/tmp
+
 # MariaDB host for backup history
 backuphisthost=127.0.0.1
 
