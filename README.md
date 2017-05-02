@@ -4,9 +4,21 @@ bgrestore-auto.sh helps you automatically restore the last successful backup fro
 
 bgrestore connects to the backup_history table in mdbutil to gather information about the last successful full backup such as whether it's encrypted, compressed, etc. This information is then used to restore on the designated MariaDB server. 
 
+
 ## How to...
 
 This all assumes the backup was taken with bgbackup (https://github.com/bstillman/bgbackup). This is necessary for the script to gather the required information. 
+
+Copy bgrestore.cnf.dist to /etc/bgrestore.cnf and configure as needed (details below). 
+
+
+### Current Limitations
+
+Currently the script assumes the location of the backup on the source and the destination is the same. Ex: if the backup is in /backups on the server backed up, it should also reside in /backups on the server to be restored. 
+
+The backup needs to already exist on the server to be restored. This can be handled in a few different ways:
+* use run_after_success in bgbackup.cnf to run a script which SCPs the backup to the server to be restored
+* share a disk at the same mount point on each server
 
 
 ## Configuration Options
