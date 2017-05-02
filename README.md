@@ -11,9 +11,6 @@ This all assumes the backup was taken with bgbackup (https://github.com/bstillma
 
 Copy bgrestore.cnf.dist to /etc/bgrestore.cnf and configure as needed (details below). 
 
-
-## Current Limitations
-
 Currently the script assumes the location of the backup on the source and the destination is the same. Ex: if the backup is in /backups on the server backed up, it should also reside in /backups on the server to be restored. 
 
 The backup needs to already exist on the server to be restored. This can be handled in a few different ways:
