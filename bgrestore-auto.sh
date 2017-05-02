@@ -12,7 +12,12 @@
 
 # Functions
 
-
+# Handle control-c
+function sigint {
+  echo "User has canceled with control-c."
+  # 130 is the standard exit code for SIGINT
+  exit 130
+}
 
 # Mail function
 function mail_log {
