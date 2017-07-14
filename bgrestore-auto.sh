@@ -52,6 +52,8 @@ function preflight {
         log_status=FAILED
         exit 1
     fi
+    # set logfile
+    logfile=$logpath/bgrestore_$(date +%Y-%m-%d-%T).log    # logfile
     # Check for xtrabackup
     if command -v innobackupex >/dev/null; then
         innobackupex=$(command -v innobackupex)
@@ -205,7 +207,6 @@ trap sigint INT
 # Set some specific variables
 starttime=$(date +"%Y-%m-%d %H:%M:%S")
 mdate=$(date +%m/%d/%y)    # Date for mail subject. Not in function so set at script start time, not when backup is finished.
-logfile=$logpath/bgrestore_$(date +%Y-%m-%d-%T).log    # logfile
 mysqlcommand=$(command -v mysql)
 innocommand=$(command -v innobackupex)
 
