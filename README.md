@@ -1,6 +1,6 @@
 # bgrestore
 
-bgrestore-auto.sh helps you automatically restore the last successful backup from bgbackup to another MariaDB server. This is very useful for verifying backups, refreshing development environments, etc. 
+bgrestore.sh helps you automatically restore the last successful backup from bgbackup to another MariaDB server. This is very useful for verifying backups, refreshing development environments, etc. 
 
 bgrestore connects to the backup_history table in mdbutil to gather information about the last successful full backup such as whether it's encrypted, compressed, etc. This information is then used to restore on the designated MariaDB server. 
 
