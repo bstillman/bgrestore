@@ -217,7 +217,7 @@ mdate=$(date +%m/%d/%y)    # Date for mail subject. Not in function so set at sc
 mysqlcommand=$(command -v mysql)
 
 innocommand="$innobackupex"
-if [ "$backuptool" == "2" ] ; then innocommand=$innocommand" --innobackupex"; fi
+if [ "$backuptool" == "1" ] ; then innocommand=$innocommand" --innobackupex"; fi
 
 # do the work
 preflight
