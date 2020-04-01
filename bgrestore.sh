@@ -54,15 +54,22 @@ function preflight {
     fi
     # set logfile
     logfile=$logpath/bgrestore_$(date +%Y-%m-%d-%T).log    # logfile
-    # Check for xtrabackup
-    if command -v innobackupex >/dev/null; then
+
+    # Check for mariabackup or xtrabackup
+    if [ "$backuptool" == "1" ] && command -v mariabackup >/dev/null; then
+        innobackupex=$(command -v mariabackup)
+        # mariabackup does not have encryption support
+        encrypt="no"
+    elif [ "$backuptool" == "2" ] && command -v innobackupex >/dev/null; then
         innobackupex=$(command -v innobackupex)
     else
-        log_info "xtrabackup/innobackupex does not appear to be installed. Please install and try again."
+        echo "The backuptool does not appear to be installed. Please check that a valid backuptool is chosen in bgbackup.cnf and that it's installed."
+        log_info "The backuptool does not appear to be installed. Please check that a valid backuptool is chosen in bgbackup.cnf and that it's installed."
         log_status=FAILED
         mail_log
         exit 1
     fi
+
     if [ "$datadir" == '' ] ; then
         log_info "Datadir location not set correctly."
         log_status=FAILED
@@ -208,7 +215,9 @@ trap sigint INT
 starttime=$(date +"%Y-%m-%d %H:%M:%S")
 mdate=$(date +%m/%d/%y)    # Date for mail subject. Not in function so set at script start time, not when backup is finished.
 mysqlcommand=$(command -v mysql)
-innocommand=$(command -v innobackupex)
+
+innocommand="$innobackupex"
+if [ "$backuptool" == "2" ] ; then innocommand=$innocommand" --innobackupex"; fi
 
 # do the work
 preflight
