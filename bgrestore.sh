@@ -70,6 +70,10 @@ function preflight {
         exit 1
     fi
 
+    innocommand="$innobackupex"
+    if [ "$backuptool" == "1" ] ; then innocommand=$innocommand" --innobackupex"; fi
+
+
     if [ "$datadir" == '' ] ; then
         log_info "Datadir location not set correctly."
         log_status=FAILED
@@ -127,7 +131,8 @@ function lastfullinfo {
         mail_log
         exit 2
     fi
-    if [ ! -d "$lastfullbulocation" ] ; then
+    if [ ! -d "$lastfullbulocation" ] && [ "$skipcopy" != "yes" ] ; then
+
         log_info "Error: $lastfullbulocation directory not found"
         log_info "The directory for the last full backup cannot be found on this server."
         log_status=FAILED
@@ -151,9 +156,14 @@ function lastfullinfo {
 
 # Function to prepare backup for restore
 function prepit {
-	cp -R "$lastfullbulocation" "$preppath"/
-    buname=$(basename "$lastfullbulocation")
-    bufullpath="$preppath"/"$buname"
+    if [ "$skipcopy" != "yes"]; then
+        cp -R "$lastfullbulocation" "$preppath"/
+        buname=$(basename "$lastfullbulocation")
+        bufullpath="$preppath"/"$buname"
+    else
+        fufullpath="$preppath"
+    fi
+
 	if [ "$lastfullencrypted" == "yes" ] ; then
 		log_info "Backup is encrypted."
         $innocommand --decrypt=AES256 --encrypt-key="$(cat "$lastfullcryptkey")" --parallel="$threads" "$bufullpath"
@@ -215,9 +225,6 @@ trap sigint INT
 starttime=$(date +"%Y-%m-%d %H:%M:%S")
 mdate=$(date +%m/%d/%y)    # Date for mail subject. Not in function so set at script start time, not when backup is finished.
 mysqlcommand=$(command -v mysql)
-
-innocommand="$innobackupex"
-if [ "$backuptool" == "1" ] ; then innocommand=$innocommand" --innobackupex"; fi
 
 # do the work
 preflight

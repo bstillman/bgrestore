@@ -36,6 +36,9 @@ backuphistschema=mdbutil
 # MariaDB host which backup should be from
 backuphost=hostname_from_backup_history
 
+# Skip copy step, place backup in preppath after creating it
+skipcopy=no
+
 # Datadir
 datadir=/var/lib/mysql
 
