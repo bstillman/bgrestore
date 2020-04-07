@@ -161,7 +161,7 @@ function prepit {
         buname=$(basename "$lastfullbulocation")
         bufullpath="$preppath"/"$buname"
     else
-        fufullpath="$preppath"
+        bufullpath="$preppath"
     fi
 
 	if [ "$lastfullencrypted" == "yes" ] ; then
