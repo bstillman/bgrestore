@@ -212,7 +212,7 @@ function cleanup {
         if [ "$skipcopy" != "yes" ]; then
 	        rm -Rf "${bufullpath:?}"
         else # Clean up prep directory instead of deleting the full backup path (which is also prep directory)
-	        rm -Rf "${preppath:?}/*"
+	        rm -Rf "${preppath}/"*
         fi
             
 	    log_info "Complete."
