@@ -209,7 +209,12 @@ function restoreit {
 function cleanup {
 	if [ "$log_status" == "SUCCEEDED" ] ; then 
 	    log_info "Cleaning up."
-	    rm -Rf "${bufullpath:?}"
+        if [ "$skipcopy" != "yes"]; then
+	        rm -Rf "${bufullpath:?}"
+        else # Clean up prep directory instead of deleting the full backup path (which is also prep directory)
+	        rm -Rf "${preppath:?}/*"
+        fi
+            
 	    log_info "Complete."
 	fi
 }
