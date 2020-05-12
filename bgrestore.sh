@@ -182,18 +182,28 @@ function prepit {
 
 # Function to restore
 function restoreit {
+
 	log_info "Shutting down MariaDB to restore. "
 	mysqlshutdowncreate
-#    $mysqlshutdowncommand "shutdown"
-    service mysql stop
+    $mysqlshutdowncommand "shutdown"
+
+    log_info "More shutdown commands to make sure MariaDB is down."
+    systemctl stop mariadb
+    pkill -9 mysqld
+    systemctl stop mariadb
+
     log_info "Deleting the data directory."
     rm -Rf "${datadir:?}"/*
+
     log_info "Copying the backup to the data directory."
     $innocommand --copy-back "$bufullpath"
+
     log_info "Fixing privileges."
     chown -R "$datadirowner":"$datadirgroup" "$datadir"
+
     log_info "Starting MariaDB."
-    service mysql start
+    systemctl start mariadb
+
     startstatus=$?
     if [ "$startstatus" -eq 0 ] ; then
         log_status=SUCCEEDED
