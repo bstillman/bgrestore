@@ -123,7 +123,7 @@ function mysqlshutdowncreate {
 # Function to get directory and other info from last full backup
 function lastfullinfo {
     mysqlhistcreate
-    lastfulluuid=$($mysqlhistcommand "select uuid from $backuphistschema.backup_history where butype = 'Full' and status = 'SUCCEEDED' and hostname = '$backuphost' and deleted_at = 0 order by end_time desc limit 1")
+    lastfulluuid=$($mysqlhistcommand "select uuid from $backuphistschema.backup_history where butype = 'Full' and status = 'SUCCEEDED' and hostname = '$backuphost' and (deleted_at IS NULL OR deleted_at = 0) order by end_time desc limit 1")
     lastfullbulocation=$($mysqlhistcommand "select bulocation from $backuphistschema.backup_history where uuid = '$lastfulluuid' ")
     if [ "$lastfullbulocation" == '' ] ; then
         log_info "Backup location not set successfully."
