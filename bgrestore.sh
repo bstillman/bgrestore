@@ -195,8 +195,8 @@ function restoreit {
     log_info "Deleting the data directory."
     rm -Rf "${datadir:?}"/*
 
-    log_info "Copying the backup to the data directory."
-    $innocommand --copy-back "$bufullpath"
+    log_info "Moving the prepared backup to the data directory."
+    $innocommand --move-back "$bufullpath"
 
     log_info "Fixing privileges."
     chown -R "$datadirowner":"$datadirgroup" "$datadir"
