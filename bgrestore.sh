@@ -156,7 +156,7 @@ function lastfullinfo {
 
 # Function to prepare backup for restore
 function prepit {
-    if [ "$skipcopy" != "yes"]; then
+    if [ "$skipcopy" != "yes" ]; then
         cp -R "$lastfullbulocation" "$preppath"/
         buname=$(basename "$lastfullbulocation")
         bufullpath="$preppath"/"$buname"
