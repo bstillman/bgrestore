@@ -4,10 +4,10 @@
 
 
 # MariaDB host for restore
-restorehost=127.0.0.1
+restorehost=localhost
 
 # MariaDB port for restore
-restoreport=40001
+restoreport=3306
 
 # MariaDB user for restore
 restoreuser=bgbackup
@@ -19,10 +19,10 @@ restorepass=password
 preppath=/backup/tmp
 
 # MariaDB host for backup history
-backuphisthost=127.0.0.1
+backuphisthost=localhost
 
 # MariaDB port for backup history
-backuphistport=40002
+backuphistport=3306
 
 # MariaDB user for backup history
 backuphistuser=bgbackup
@@ -35,6 +35,9 @@ backuphistschema=mdbutil
 
 # MariaDB host which backup should be from
 backuphost=hostname_from_backup_history
+
+# Skip copy step, place backup in preppath after creating it. This will also make bgrestore delete the contents of the folder instead of the folder itself (after succeeding)
+skipcopy=no
 
 # Datadir
 datadir=/var/lib/mysql

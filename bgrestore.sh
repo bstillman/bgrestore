@@ -54,15 +54,24 @@ function preflight {
     fi
     # set logfile
     logfile=$logpath/bgrestore_$(date +%Y-%m-%d-%T).log    # logfile
-    # Check for xtrabackup
-    if command -v innobackupex >/dev/null; then
+
+    # Check for mariabackup or xtrabackup
+    if [ "$backuptool" == "1" ] && command -v mariabackup >/dev/null; then
+        innobackupex=$(command -v mariabackup)
+    elif [ "$backuptool" == "2" ] && command -v innobackupex >/dev/null; then
         innobackupex=$(command -v innobackupex)
     else
-        log_info "xtrabackup/innobackupex does not appear to be installed. Please install and try again."
+        echo "The backuptool does not appear to be installed. Please check that a valid backuptool is chosen in bgbackup.cnf and that it's installed."
+        log_info "The backuptool does not appear to be installed. Please check that a valid backuptool is chosen in bgbackup.cnf and that it's installed."
         log_status=FAILED
         mail_log
         exit 1
     fi
+
+    innocommand="$innobackupex"
+    if [ "$backuptool" == "1" ] ; then innocommand=$innocommand" --innobackupex"; fi
+
+
     if [ "$datadir" == '' ] ; then
         log_info "Datadir location not set correctly."
         log_status=FAILED
@@ -112,7 +121,7 @@ function mysqlshutdowncreate {
 # Function to get directory and other info from last full backup
 function lastfullinfo {
     mysqlhistcreate
-    lastfulluuid=$($mysqlhistcommand "select uuid from $backuphistschema.backup_history where butype = 'Full' and status = 'SUCCEEDED' and hostname = '$backuphost' and deleted_at = 0 order by end_time desc limit 1")
+    lastfulluuid=$($mysqlhistcommand "select uuid from $backuphistschema.backup_history where butype = 'Full' and status = 'SUCCEEDED' and hostname = '$backuphost' and (deleted_at IS NULL OR deleted_at = 0) order by end_time desc limit 1")
     lastfullbulocation=$($mysqlhistcommand "select bulocation from $backuphistschema.backup_history where uuid = '$lastfulluuid' ")
     if [ "$lastfullbulocation" == '' ] ; then
         log_info "Backup location not set successfully."
@@ -120,7 +129,8 @@ function lastfullinfo {
         mail_log
         exit 2
     fi
-    if [ ! -d "$lastfullbulocation" ] ; then
+    if [ ! -d "$lastfullbulocation" ] && [ "$skipcopy" != "yes" ] ; then
+
         log_info "Error: $lastfullbulocation directory not found"
         log_info "The directory for the last full backup cannot be found on this server."
         log_status=FAILED
@@ -144,9 +154,14 @@ function lastfullinfo {
 
 # Function to prepare backup for restore
 function prepit {
-	cp -R "$lastfullbulocation" "$preppath"/
-    buname=$(basename "$lastfullbulocation")
-    bufullpath="$preppath"/"$buname"
+    if [ "$skipcopy" != "yes" ]; then
+        cp -R "$lastfullbulocation" "$preppath"/
+        buname=$(basename "$lastfullbulocation")
+        bufullpath="$preppath"/"$buname"
+    else
+        bufullpath="$preppath"
+    fi
+
 	if [ "$lastfullencrypted" == "yes" ] ; then
 		log_info "Backup is encrypted."
         $innocommand --decrypt=AES256 --encrypt-key="$(cat "$lastfullcryptkey")" --parallel="$threads" "$bufullpath"
@@ -165,18 +180,28 @@ function prepit {
 
 # Function to restore
 function restoreit {
+
 	log_info "Shutting down MariaDB to restore. "
 	mysqlshutdowncreate
-#    $mysqlshutdowncommand "shutdown"
-    service mysql stop
+    $mysqlshutdowncommand "shutdown"
+
+    log_info "More shutdown commands to make sure MariaDB is down."
+    systemctl stop mariadb
+    pkill -9 mysqld
+    systemctl stop mariadb
+
     log_info "Deleting the data directory."
     rm -Rf "${datadir:?}"/*
-    log_info "Copying the backup to the data directory."
-    $innocommand --copy-back "$bufullpath"
+
+    log_info "Moving the prepared backup to the data directory."
+    $innocommand --move-back "$bufullpath"
+
     log_info "Fixing privileges."
     chown -R "$datadirowner":"$datadirgroup" "$datadir"
+
     log_info "Starting MariaDB."
-    service mysql start
+    systemctl start mariadb
+
     startstatus=$?
     if [ "$startstatus" -eq 0 ] ; then
         log_status=SUCCEEDED
@@ -192,7 +217,12 @@ function restoreit {
 function cleanup {
 	if [ "$log_status" == "SUCCEEDED" ] ; then 
 	    log_info "Cleaning up."
-	    rm -Rf "${bufullpath:?}"
+        if [ "$skipcopy" != "yes" ]; then
+	        rm -Rf "${bufullpath:?}"
+        else # Clean up prep directory instead of deleting the full backup path (which is also prep directory)
+	        rm -Rf "${preppath}/"*
+        fi
+            
 	    log_info "Complete."
 	fi
 }
@@ -208,7 +238,6 @@ trap sigint INT
 starttime=$(date +"%Y-%m-%d %H:%M:%S")
 mdate=$(date +%m/%d/%y)    # Date for mail subject. Not in function so set at script start time, not when backup is finished.
 mysqlcommand=$(command -v mysql)
-innocommand=$(command -v innobackupex)
 
 # do the work
 preflight
